@@ -1,0 +1,222 @@
+:root {
+  --bg: #1b1712; /* keep equal to -Background in tools/make-tiles.ps1 */
+  --panel: #f3e7cd;
+  --panel-edge: #8a6f45;
+  --ink: #2b2115;
+  --ink-soft: #66543a;
+  --accent: #7a1f1a;
+  --on-accent: #fbf3e2;
+  --title: #ead9b5;
+  --serif: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--serif);
+}
+
+.title-bar {
+  flex: none;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--panel-edge);
+}
+
+.title-bar h1 {
+  margin: 0;
+  color: var(--title);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+#map {
+  flex: 1;
+  min-height: 0;
+  background: var(--bg);
+}
+
+/* Hides hairline gaps between tiles at fractional zoom levels. */
+.leaflet-tile-container img {
+  outline: 1px solid transparent;
+}
+
+.leaflet-container {
+  font-family: var(--serif);
+  font-size: 15px;
+}
+
+.leaflet-container.is-picking,
+.leaflet-container.is-picking.leaflet-grab,
+.leaflet-container.is-picking.leaflet-dragging {
+  cursor: crosshair;
+}
+
+.leaflet-bar a,
+.leaflet-bar a:hover {
+  background: var(--panel);
+  border-color: var(--panel-edge);
+  color: var(--ink);
+}
+
+.leaflet-bar a.leaflet-disabled {
+  background: var(--panel);
+  color: #b3a180;
+}
+
+.leaflet-control-layers {
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 4px;
+  color: var(--ink);
+}
+
+.leaflet-container .leaflet-control-attribution {
+  background: rgb(243 231 205 / 0.8);
+  color: var(--ink-soft);
+}
+
+.leaflet-control-attribution a {
+  color: inherit;
+}
+
+.coord-tool {
+  max-width: calc(100vw - 32px);
+  width: max-content;
+  border: 1px solid var(--panel-edge);
+  border-radius: 4px;
+  background: var(--panel);
+  box-shadow: 0 1px 5px rgb(0 0 0 / 0.5);
+}
+
+.coord-toggle,
+.coord-copy {
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.coord-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 36px;
+  padding: 4px 11px 4px 8px;
+}
+
+.coord-toggle svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.coord-toggle[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.coord-toggle:focus-visible,
+.coord-copy:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.coord-panel {
+  padding: 8px 11px 10px;
+}
+
+.coord-panel p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.coord-result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+}
+
+.coord-value {
+  font-variant-numeric: tabular-nums;
+  user-select: text;
+}
+
+.coord-value b {
+  margin-right: 4px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+.coord-copy {
+  min-height: 32px;
+  padding: 2px 12px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.coord-status:not(:empty) {
+  margin-top: 6px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+#notices {
+  position: fixed;
+  right: 16px;
+  bottom: 28px;
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: min(420px, calc(100vw - 32px));
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--panel);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.notice button {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
