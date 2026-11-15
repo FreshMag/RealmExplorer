@@ -52,6 +52,20 @@ function parseCsv(text) {
   return rows;
 }
 
+// Checkbox cells publish as TRUE/FALSE; also accept what people type by hand.
+function isTrue(value) {
+  return ["true", "vero", "1", "x", "si", "sì", "yes"].includes((value ?? "").trim().toLowerCase());
+}
+
+// Turns a sheet into objects keyed by lowercase header, skipping empty rows.
+function readRecords(rows) {
+  const header = (rows[0] ?? []).map((name) => name.trim().toLowerCase());
+  return rows
+    .slice(1)
+    .filter((row) => row.some((cell) => cell.trim() !== ""))
+    .map((row) => Object.fromEntries(header.map((name, i) => [name, (row[i] ?? "").trim()])));
+}
+
 // A sheet with Italian locale publishes decimals as "12,5".
 function parsePercent(value) {
   const text = (value ?? "").trim().replace(",", ".");
@@ -65,6 +79,7 @@ function readPins(sheetName, rows) {
   const xColumn = header.indexOf("x");
   const yColumn = header.indexOf("y");
   const colorColumn = header.indexOf("color");
+  const hiddenColumn = header.indexOf("hidden");
   if (xColumn < 0 || yColumn < 0 || colorColumn < 0) {
     notify(`Foglio "${sheetName}": servono le colonne x, y e color.`);
     return [];
@@ -74,6 +89,7 @@ function readPins(sheetName, rows) {
   rows.slice(1).forEach((row, index) => {
     if (row.every((cell) => cell.trim() === "")) return;
     const sheetRow = index + 2;
+    if (hiddenColumn >= 0 && isTrue(row[hiddenColumn])) return;
 
     const x = parsePercent(row[xColumn]);
     const y = parsePercent(row[yColumn]);
@@ -98,11 +114,14 @@ async function fetchChecked(url, options) {
   return response;
 }
 
+async function fetchSheet(url) {
+  const response = await fetchChecked(url, { cache: "no-store" });
+  return parseCsv(await response.text());
+}
+
 async function loadSheet(sheet, group, toLatLng) {
   try {
-    const response = await fetchChecked(sheet.url, { cache: "no-store" });
-    const rows = parseCsv(await response.text());
-    for (const pin of readPins(sheet.name, rows)) {
+    for (const pin of readPins(sheet.name, await fetchSheet(sheet.url))) {
       L.circleMarker(toLatLng(pin.x, pin.y), {
         radius: 7,
         color: "#fbf3e2",
@@ -224,10 +243,7 @@ function createCoordinateTool(toPercent, toLatLng) {
   });
 }
 
-async function main() {
-  document.title = config.title;
-  document.getElementById("title").textContent = config.title;
-
+async function initMap() {
   const response = await fetchChecked("tiles/meta.json");
   const meta = await response.json();
 
@@ -242,7 +258,7 @@ async function main() {
   });
 
   const zoomSnap = 0.25;
-  const map = L.map("map", {
+  const map = L.map("view-mappa", {
     crs: L.CRS.Simple,
     zoomSnap,
     zoomDelta: 0.5,
@@ -283,6 +299,107 @@ async function main() {
     L.control.layers(null, overlays, { collapsed: false }).addTo(map);
   }
   await Promise.all(loads);
+  return map;
 }
 
-main().catch((error) => notify(`Mappa non caricata: ${error.message}.`));
+async function loadSettings(calendar) {
+  if (!config.settingsUrl) return;
+  try {
+    const settings = new Map();
+    for (const record of readRecords(await fetchSheet(config.settingsUrl))) {
+      if (record.key) settings.set(record.key.toLowerCase(), record.value ?? "");
+    }
+
+    const date = settings.get("current_date") ?? "";
+    calendar.setCurrent(date);
+    document.getElementById("current-date-text").textContent = date;
+    document.getElementById("current-date").hidden = date === "";
+    if (date !== "" && !Harptos.parse(date)) {
+      notify(`current_date "${date}" non è una data di Harptos: il calendario non la evidenzia.`);
+    }
+  } catch (error) {
+    notify(`Configurazione non caricata: ${error.message}.`);
+  }
+}
+
+async function loadRegistry() {
+  const status = document.getElementById("registry-status");
+  const list = document.getElementById("registry-list");
+  const search = document.getElementById("registry-search");
+
+  let entries;
+  try {
+    entries = readRecords(await fetchSheet(config.registryUrl)).filter((entry) => entry.address || entry.name);
+  } catch (error) {
+    status.textContent = `Rubrica non caricata: ${error.message}.`;
+    return;
+  }
+
+  const items = entries.map((entry) => {
+    const item = document.createElement("li");
+    const name = document.createElement("span");
+    name.className = "registry-name";
+    name.textContent = entry.name || "Senza nome";
+    const address = document.createElement("code");
+    address.className = "registry-address";
+    address.textContent = entry.address ?? "";
+    item.append(name, address);
+    return { item, text: `${entry.name ?? ""} ${entry.address ?? ""}`.toLowerCase() };
+  });
+  list.replaceChildren(...items.map(({ item }) => item));
+
+  const filter = () => {
+    const query = search.value.trim().toLowerCase();
+    let visible = 0;
+    for (const { item, text } of items) {
+      item.hidden = query !== "" && !text.includes(query);
+      if (!item.hidden) visible++;
+    }
+    if (items.length === 0) status.textContent = "La rubrica è vuota.";
+    else if (visible === 0) status.textContent = "Nessun indirizzo trovato.";
+    else status.textContent = "";
+  };
+  search.addEventListener("input", filter);
+  filter();
+}
+
+function setupViews() {
+  const names = ["mappa", "calendario", "rubrica"];
+  let mapLoad = null;
+
+  const show = () => {
+    const requested = location.hash.slice(1);
+    const current = names.includes(requested) ? requested : "mappa";
+    for (const name of names) {
+      document.getElementById(`view-${name}`).hidden = name !== current;
+    }
+    document.querySelectorAll(".tabs a").forEach((link) => {
+      if (link.dataset.view === current) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+    });
+
+    if (current !== "mappa") return;
+    // Leaflet measures its container, so the map is built the first time it is visible.
+    if (!mapLoad) {
+      mapLoad = initMap();
+      mapLoad.catch((error) => notify(`Mappa non caricata: ${error.message}.`));
+    } else {
+      mapLoad.then((map) => map.invalidateSize()).catch(() => {});
+    }
+  };
+
+  window.addEventListener("hashchange", show);
+  show();
+}
+
+function main() {
+  document.title = config.title;
+  document.getElementById("title").textContent = config.title;
+
+  const calendar = Harptos.mount();
+  setupViews();
+  loadSettings(calendar);
+  loadRegistry();
+}
+
+main();

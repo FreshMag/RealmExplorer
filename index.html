@@ -15,8 +15,58 @@
   <body>
     <header class="title-bar">
       <h1 id="title">Realm Explorer</h1>
+      <nav class="tabs" aria-label="Sezioni">
+        <a href="#mappa" data-view="mappa">Mappa</a>
+        <a href="#calendario" data-view="calendario">Calendario</a>
+        <a href="#rubrica" data-view="rubrica">Rubrica</a>
+      </nav>
+      <a class="current-date" id="current-date" href="#calendario" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3.5" y="5" width="17" height="15" rx="1.5" />
+          <path d="M3.5 10h17M8 3v4M16 3v4" />
+        </svg>
+        <span id="current-date-text"></span>
+      </a>
     </header>
-    <main id="map" aria-label="Mappa"></main>
+
+    <main id="view-mappa" class="view map-view" aria-label="Mappa"></main>
+
+    <section id="view-calendario" class="view page" aria-labelledby="calendar-title" hidden>
+      <div class="page-card">
+        <h2 id="calendar-title">Calendario di Harptos</h2>
+        <p class="page-lede" id="calendar-today"></p>
+
+        <div class="cal-nav">
+          <button type="button" class="cal-step" id="cal-prev" aria-label="Periodo precedente">‹</button>
+          <div class="cal-heading">
+            <h3 id="cal-name"></h3>
+            <p id="cal-sub"></p>
+          </div>
+          <button type="button" class="cal-step" id="cal-next" aria-label="Periodo successivo">›</button>
+        </div>
+
+        <div id="cal-body"></div>
+        <ul class="cal-notes" id="cal-notes"></ul>
+        <button type="button" class="text-button" id="cal-goto-today" hidden>Torna a oggi</button>
+
+        <h3 class="section-label">L'anno</h3>
+        <ol class="cal-year" id="cal-year"></ol>
+      </div>
+    </section>
+
+    <section id="view-rubrica" class="view page" aria-labelledby="registry-title" hidden>
+      <div class="page-card">
+        <h2 id="registry-title">Rubrica</h2>
+        <p class="page-lede">Gli indirizzi conosciuti.</p>
+        <label class="search">
+          <span class="visually-hidden">Cerca</span>
+          <input type="search" id="registry-search" placeholder="Cerca per nome o indirizzo" autocomplete="off" />
+        </label>
+        <p class="registry-status" id="registry-status" aria-live="polite">Caricamento…</p>
+        <ul class="registry-list" id="registry-list"></ul>
+      </div>
+    </section>
+
     <div id="notices" role="status"></div>
 
     <script
@@ -25,6 +75,7 @@
       crossorigin=""
     ></script>
     <script src="config.js"></script>
+    <script src="calendar.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
